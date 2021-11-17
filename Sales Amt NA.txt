@@ -1,0 +1,39 @@
+VAR SalesOfAll =
+    CALCULATE ( [Sales Amount], REMOVEFILTERS ( 'Product Names' ) )
+RETURN
+    IF (
+        NOT ISINSCOPE ( 'Product Names'[Product Name] ),
+        -- Calculation for a group of products 
+        SalesOfAll,
+        -- Calculation for one product name
+        VAR ProductsToRank = [TopN Value]
+        VAR SalesOfCurrentProduct = [Sales Amount]
+        VAR IsOtherSelected =
+            SELECTEDVALUE ( 'Product Names'[Product Name] ) = "Others"
+        RETURN
+            IF (
+                NOT IsOtherSelected,
+                -- Calculation for a regular product
+                SalesOfCurrentProduct,
+                -- Calculation for Others
+                VAR VisibleProducts =
+                    CALCULATETABLE (
+                        VALUES ( 'Product' ),
+                        REMOVEFILTERS ( 'Product Names'[Product Name] )
+                    )
+                VAR ProductsWithSales =
+                    ADDCOLUMNS ( VisibleProducts, "@SalesAmount", [Sales Amount] )
+                VAR FilterTopProducts =
+                    TOPN ( ProductsToRank, ProductsWithSales, [@SalesAmount] )
+                VAR FilterOthers =
+                    EXCEPT ( ProductsWithSales, FilterTopProducts )
+                VAR SalesOthers =
+                    CALCULATE (
+                        [Sales Amount],
+                        FilterOthers,
+                        REMOVEFILTERS ( 'Product Names'[Product Name] )
+                    )
+                RETURN
+                    SalesOthers
+            )
+    )

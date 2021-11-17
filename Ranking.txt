@@ -1,0 +1,23 @@
+IF (
+    ISINSCOPE ( 'Product Names'[Product Name] ),
+    VAR ProductsToRank = [TopN Value]
+    VAR SalesAmount = [Sales Amount]
+    VAR IsOtherSelected =
+        SELECTEDVALUE ( 'Product Names'[Product Name] ) = "Others"
+    RETURN
+        IF (
+            IsOtherSelected,
+            -- Rank for Others
+            ProductsToRank + 1,
+            -- Rank for regular products
+            IF (
+                SalesAmount > 0,
+                VAR VisibleProducts =
+                    CALCULATETABLE ( VALUES ( 'Product' ), ALLSELECTED ( 'Product Names' ) )
+                VAR Ranking =
+                    RANKX ( VisibleProducts, [Sales Amount], SalesAmount )
+                RETURN
+                    IF ( Ranking > 0 && Ranking <= ProductsToRank, Ranking )
+            )
+        )
+ )

@@ -1,0 +1,9 @@
+VAR Ranking = [Ranking]
+VAR TopNValue = [TopN Value]
+VAR Result =
+    IF (
+        NOT ISBLANK ( Ranking ),
+        ( Ranking <= TopNValue ) - ( Ranking = TopNValue + 1 )
+    )
+RETURN
+    Result
