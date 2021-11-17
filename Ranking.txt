@@ -19,5 +19,5 @@ IF (
                 RETURN
                     IF ( Ranking > 0 && Ranking <= ProductsToRank, Ranking )
             )
-        )
+        ) 
  ) 
