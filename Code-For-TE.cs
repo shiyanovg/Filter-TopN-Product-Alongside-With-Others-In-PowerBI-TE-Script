@@ -1,1 +1,1 @@
-﻿// Test file for Git
+// Test file for Git 2
