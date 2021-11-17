@@ -6,4 +6,4 @@ VAR Result =
         ( Ranking <= TopNValue ) - ( Ranking = TopNValue + 1 )
     )
 RETURN
-    Result
+    Result 
