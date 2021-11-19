@@ -18,26 +18,64 @@ if (!TopNCheck || !ProductNamesCheck) {
         string test = "Hello";
       
         test.Output();
+        
+        
+        
+        // IF-part of Ranking expression
+   string  PNIsInScope = "IF ( ISINSCOPE ( 'Product Names'[Product Name] ), " ;
+   
+   string space = " "; 
+   const string quote = "\""; 
+   string oth = "Others";
+   
+   
+   string PrToR = " VAR ProductsToRank = [TopN Value] ";
+   
+  string SA = " VAR SalesAmount = [Sales Amount] ";
+   
+  string IsOtherSelected = " VAR IsOtherSelected = SELECTEDVALUE ( 'Product Names'[Product Name] ) = " + quote + oth + quote ;
+  string ret = "return";
+  
+  string retexpIF = " IF ( IsOtherSelected,  /* Rank for Others */ ProductsToRank + 1 , ";
+  
+string regProds =  " /* Rank for regular products */ IF ( SalesAmount > 0,";
+
+
+string VisProds = " VAR VisibleProducts = CALCULATETABLE ( VALUES ( 'Product' ), ALLSELECTED ( 'Product Names' ) ) ";
+
+string RankVisProds = " VAR Ranking = RANKX ( VisibleProducts, [Sales Amount], SalesAmount ) ";
+
+string RegProdsReturn = " RETURN IF ( Ranking > 0 && Ranking <= ProductsToRank, Ranking ) ";
+
+string RegProdsClose = ")"; 
+
+string retexpIFTrue = retexpIF + space + regProds + space + VisProds + space
+ + RankVisProds + space +  RegProdsReturn + space + RegProdsClose;
+
+
+string retexpIFClose = ")";
+
+// Expression part for TRUE
+  string  PNIsInScopeTrue = PrToR + space + SA + space + IsOtherSelected + space
+    + ret +  space + retexpIFTrue + retexpIFClose ;
+   
+  
+  // Expression part for FALSE
+   string PNIsInScopeFalse = ")";
+   
+  // Full expression for Ranking
+  string RankMesExp = PNIsInScope + PNIsInScopeTrue + PNIsInScopeFalse;
+  
+  
+  // Creat Ranking measure
+  var RankMes = (Model.Tables["Product Names"] as CalculatedTable).AddMeasure("Ranking 2", FormatDax(RankMesExp) );
+  RankMes.FormatString = "0";
       
         //return;
     };
 
     
-    FormatDax(Selected.Measures.Expression).Output();
-
-/*    
-    
-    System.Net.WebClient w = new System.Net.WebClient(); 
-
-string path = System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData);
-string url = "https://raw.githubusercontent.com/microsoft/Analysis-Services/master/BestPracticeRules/BPARules.json";
-string downloadLoc = path+@"\TabularEditor\BPARules.json";
-w.DownloadFile(url, downloadLoc);
-    
-    
-    
-*/ 
-    
+ 
 // ===================
 
        
