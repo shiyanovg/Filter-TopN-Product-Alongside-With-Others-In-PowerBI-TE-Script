@@ -15,64 +15,59 @@ if (!TopNCheck || !ProductNamesCheck) {
     Error("No 'TopN' Parameter!" + "\n" + "No 'Product Names' Table!");
     return; 
     } else {
-        string test = "Hello";
-      
-        test.Output();
-        
-        
-        
-        // IF-part of Ranking expression
+     // IF-part of Ranking expression
    string  PNIsInScope = "IF ( ISINSCOPE ( 'Product Names'[Product Name] ), " ;
-   
    string space = " "; 
    const string quote = "\""; 
    string oth = "Others";
-   
-   
    string PrToR = " VAR ProductsToRank = [TopN Value] ";
+   string SA = " VAR SalesAmount = [Sales Amount] ";
+   string IsOtherSelected = " VAR IsOtherSelected = SELECTEDVALUE ( 'Product Names'[Product Name] ) = " + quote + oth + quote ;
+   string ret = "RETURN";
+   string retexpIF = " IF ( IsOtherSelected,  /* Rank for Others */ ProductsToRank + 1 , ";
+   string regProds =  " /* Rank for regular products */ IF ( SalesAmount > 0,";
+   string VisProds = " VAR VisibleProducts = CALCULATETABLE ( VALUES ( 'Product' ), ALLSELECTED ( 'Product Names' ) ) ";
+   string RankVisProds = " VAR Ranking = RANKX ( VisibleProducts, [Sales Amount], SalesAmount ) ";
+   string RegProdsReturn = " RETURN IF ( Ranking > 0 && Ranking <= ProductsToRank, Ranking ) ";
+   string RegProdsClose = ")"; 
+   string retexpIFTrue = retexpIF + space + regProds + space + VisProds + space
+   + RankVisProds + space +  RegProdsReturn + space + RegProdsClose ;
+   string retexpIFClose = ")";
+
+   // Expression part for TRUE
+   string  PNIsInScopeTrue = PrToR + space + SA + space + IsOtherSelected + space
+        + ret +  space + retexpIFTrue + retexpIFClose ;
    
-  string SA = " VAR SalesAmount = [Sales Amount] ";
-   
-  string IsOtherSelected = " VAR IsOtherSelected = SELECTEDVALUE ( 'Product Names'[Product Name] ) = " + quote + oth + quote ;
-  string ret = "return";
-  
-  string retexpIF = " IF ( IsOtherSelected,  /* Rank for Others */ ProductsToRank + 1 , ";
-  
-string regProds =  " /* Rank for regular products */ IF ( SalesAmount > 0,";
-
-
-string VisProds = " VAR VisibleProducts = CALCULATETABLE ( VALUES ( 'Product' ), ALLSELECTED ( 'Product Names' ) ) ";
-
-string RankVisProds = " VAR Ranking = RANKX ( VisibleProducts, [Sales Amount], SalesAmount ) ";
-
-string RegProdsReturn = " RETURN IF ( Ranking > 0 && Ranking <= ProductsToRank, Ranking ) ";
-
-string RegProdsClose = ")"; 
-
-string retexpIFTrue = retexpIF + space + regProds + space + VisProds + space
- + RankVisProds + space +  RegProdsReturn + space + RegProdsClose;
-
-
-string retexpIFClose = ")";
-
-// Expression part for TRUE
-  string  PNIsInScopeTrue = PrToR + space + SA + space + IsOtherSelected + space
-    + ret +  space + retexpIFTrue + retexpIFClose ;
-   
-  
-  // Expression part for FALSE
+   // Expression part for FALSE
    string PNIsInScopeFalse = ")";
    
-  // Full expression for Ranking
-  string RankMesExp = PNIsInScope + PNIsInScopeTrue + PNIsInScopeFalse;
+   // Full expression for Ranking
+   string RankMesExp = PNIsInScope + PNIsInScopeTrue + PNIsInScopeFalse;
   
-  
-  // Creat Ranking measure
-  var RankMes = (Model.Tables["Product Names"] as CalculatedTable).AddMeasure("Ranking 2", FormatDax(RankMesExp) );
-  RankMes.FormatString = "0";
+   // Create Ranking measure
+   //var RankMes = (Model.Tables["Product Names"] as CalculatedTable).AddMeasure("Ranking 2", FormatDax(RankMesExp) );
+    //    RankMes.FormatString = "0";
       
-        //return;
-    };
+   // Internals for Visible Row
+   string VarRanking = " VAR Ranking = [Ranking] " ;
+   string VarTopN = " VAR TopNValue = [TopN Value] " ;
+   string VarResCondition = " NOT ISBLANK ( Ranking ) " ;
+   string VarResTrue = " ( Ranking <= TopNValue ) - ( Ranking = TopNValue + 1 ) " ;
+   string VarRes = "VAR Result = IF( " + VarResCondition + ", " + VarResTrue + ")" ;     
+   string Res = "Result" ;
+   string VisbleRowExpression = VarRanking + space + VarTopN + space + 
+        VarRes + space + ret + space + Res ;
+
+    // Create Visible Row Measure
+    // var VisbleRowMeasure = (Model.Tables["Product Names"] as CalculatedTable).AddMeasure("Visible Row 2", FormatDax(VisbleRowExpression) );
+    
+    // Internals for Sales Amt NA
+
+
+
+
+    //return;
+};
 
     
  
