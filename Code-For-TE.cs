@@ -45,8 +45,8 @@ if (!TopNCheck || !ProductNamesCheck) {
    string RankMesExp = PNIsInScope + PNIsInScopeTrue + PNIsInScopeFalse;
   
    // Create Ranking measure
-   //var RankMes = (Model.Tables["Product Names"] as CalculatedTable).AddMeasure("Ranking 2", FormatDax(RankMesExp) );
-    //    RankMes.FormatString = "0";
+   var RankMes = (Model.Tables["Product Names"] as CalculatedTable).AddMeasure("Ranking", FormatDax(RankMesExp) );
+        RankMes.FormatString = "0";
       
    // Internals for Visible Row
    string VarRanking = " VAR Ranking = [Ranking] " ;
@@ -59,106 +59,57 @@ if (!TopNCheck || !ProductNamesCheck) {
         VarRes + space + ret + space + Res ;
 
     // Create Visible Row Measure
-    // var VisbleRowMeasure = (Model.Tables["Product Names"] as CalculatedTable).AddMeasure("Visible Row 2", FormatDax(VisbleRowExpression) );
+     var VisbleRowMeasure = (Model.Tables["Product Names"] as CalculatedTable).AddMeasure("Visible Row", FormatDax(VisbleRowExpression) );
     
     // Internals for Sales Amt NA
-
-
-
-
-    //return;
+    string VarSalesOfAll = "VAR SalesOfAll = CALCULATE ( [Sales Amount], REMOVEFILTERS ( 'Product Names' ) ) " ;
+    // RETURN Internals
+    string ScopeCheck = " NOT ISINSCOPE ( 'Product Names'[Product Name] ) " ;
+    
+    
+    // Construct TRUE Part for ScopeCheck
+    string ScopeCheckTrue = " /* Calculation for a group of products */ SalesOfAll" ;
+    
+    string VarProdsToRank = " VAR ProductsToRank = [TopN Value] " ;
+    string VarSalesCurrProd = " VAR SalesOfCurrentProduct = [Sales Amount] " ;
+    
+    string RetCondition = " NOT IsOtherSelected " ;
+    string RetConditionTrue = " /* Calculation for a regular product */ SalesOfCurrentProduct " ;
+    
+    string FalseComment = " /* Calculation for Others */ " ;
+    string FalseVarVisProds = " VAR VisibleProducts = CALCULATETABLE ( VALUES ( 'Product' ), REMOVEFILTERS ( 'Product Names'[Product Name] ) ) " ;
+    string FalseVarProdsWithSales = " VAR ProductsWithSales = ADDCOLUMNS ( VisibleProducts, " + quote + "@SalesAmount" + quote + ", [Sales Amount] ) " ;
+    string VarFilterTopProds = " VAR FilterTopProducts = TOPN ( ProductsToRank, ProductsWithSales, [@SalesAmount] ) " ;
+    string VarFilterOthers = " VAR FilterOthers = EXCEPT ( ProductsWithSales, FilterTopProducts ) " ;
+    string VarSalesOthers = " VAR SalesOthers = CALCULATE ( [Sales Amount], FilterOthers, REMOVEFILTERS ( 'Product Names'[Product Name] ) ) " ;
+    string SalOth = " SalesOthers " ;
+    
+    string RetConditionFalse = 
+        FalseComment + space + FalseVarVisProds + space + FalseVarProdsWithSales + space +
+             VarFilterTopProds + space + VarFilterOthers + space + VarSalesOthers + space +
+             ret + space + SalOth ;
+    
+    string ReturnPart = 
+            "IF( " + RetCondition + ", " 
+                    + RetConditionTrue + ", " + 
+                    RetConditionFalse + space + ")" ;
+    
+    // Construct FALSE Part for ScopeCheck
+    string ScopeCheckFalse = 
+        VarProdsToRank + space + VarProdsToRank + space + VarSalesCurrProd + space + IsOtherSelected + 
+        space + ret + space + ReturnPart ;
+    
+    // Constuct RETURN Part of Sales Amt NA
+    string SalesAmtRetExp = "IF( " + ScopeCheck + ", " + ScopeCheckTrue + ", " + ScopeCheckFalse + ")" ; 
+    
+    // Constuct Sales Amt NA Expression
+    string SalesAmtNAExpression = VarSalesOfAll + space + ret + space + SalesAmtRetExp;
+    
+    //Create Sales Amt NA Measure
+    var SalesAmtNAMeasure = (Model.Tables["Product Names"] as CalculatedTable).AddMeasure("Sales Amt NA", FormatDax(SalesAmtNAExpression) );
+    SalesAmtNAMeasure.FormatString = "#,0.00";
+    
+    
 };
 
-    
- 
-// ===================
-
-       
-/*
-Ranking:=
-IF (
-    ISINSCOPE ( 'Product Names'[Product Name] ),
-    VAR ProductsToRank = [TopN Value]
-    VAR SalesAmount = [Sales Amount]
-    VAR IsOtherSelected =
-        SELECTEDVALUE ( 'Product Names'[Product Name] ) = "Others"
-    RETURN
-        IF (
-            IsOtherSelected,
-            -- Rank for Others
-            ProductsToRank + 1,
-            -- Rank for regular products
-            IF (
-                SalesAmount > 0,
-                VAR VisibleProducts =
-                    CALCULATETABLE ( VALUES ( 'Product' ), ALLSELECTED ( 'Product Names' ) )
-                VAR Ranking =
-                    RANKX ( VisibleProducts, [Sales Amount], SalesAmount )
-                RETURN
-                    IF ( Ranking > 0 && Ranking <= ProductsToRank, Ranking )
-            )
-        )
- )
-*/   
-       
-       
-/*
-
-Visible Row :=
-VAR Ranking = [Ranking]
-VAR TopNValue = [TopN Value]
-VAR Result =
-    IF (
-        NOT ISBLANK ( Ranking ),
-        ( Ranking <= TopNValue ) - ( Ranking = TopNValue + 1 )
-    )
-RETURN
-    Result
-    
-*/
-        
-/*
- Sales Amt NA :=
- VAR SalesOfAll =
-    CALCULATE ( [Sales Amount], REMOVEFILTERS ( 'Product Names' ) )
-RETURN
-    IF (
-        NOT ISINSCOPE ( 'Product Names'[Product Name] ),
-        -- Calculation for a group of products 
-        SalesOfAll,
-        -- Calculation for one product name
-        VAR ProductsToRank = [TopN Value]
-        VAR SalesOfCurrentProduct = [Sales Amount]
-        VAR IsOtherSelected =
-            SELECTEDVALUE ( 'Product Names'[Product Name] ) = "Others"
-        RETURN
-            IF (
-                NOT IsOtherSelected,
-                -- Calculation for a regular product
-                SalesOfCurrentProduct,
-                -- Calculation for Others
-                VAR VisibleProducts =
-                    CALCULATETABLE (
-                        VALUES ( 'Product' ),
-                        REMOVEFILTERS ( 'Product Names'[Product Name] )
-                    )
-                VAR ProductsWithSales =
-                    ADDCOLUMNS ( VisibleProducts, "@SalesAmount", [Sales Amount] )
-                VAR FilterTopProducts =
-                    TOPN ( ProductsToRank, ProductsWithSales, [@SalesAmount] )
-                VAR FilterOthers =
-                    EXCEPT ( ProductsWithSales, FilterTopProducts )
-                VAR SalesOthers =
-                    CALCULATE (
-                        [Sales Amount],
-                        FilterOthers,
-                        REMOVEFILTERS ( 'Product Names'[Product Name] )
-                    )
-                RETURN
-                    SalesOthers
-            )
-    )
- 
- */     
-        
-        
+  
